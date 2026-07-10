@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioTime Cloud - Kirish</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Outfit Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        darkBg: '#060913',
+                        cardBg: '#131A30',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #060913;
+            background-image: 
+                radial-gradient(at 50% 0%, rgba(37, 99, 235, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+        }
+        .glass-card {
+            background: rgba(19, 26, 48, 0.65);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 antialiased">
+
+    <div class="w-full max-w-md glass-card rounded-3xl p-8 relative overflow-hidden">
+        <!-- Glowing Orb -->
+        <div class="absolute -top-10 -right-10 h-32 w-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+        
+        <!-- Logo -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30 mb-4">
+                <i class="fa-solid fa-clock-rotate-left text-2xl text-white"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-white tracking-tight">BioTime Cloud</h1>
+            <p class="text-slate-400 text-xs mt-1">Boshqaruv tizimiga kirish</p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-xs font-semibold text-red-400 flex items-center space-x-2">
+            <i class="fa-solid fa-circle-exclamation text-sm"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Foydalanuvchi nomi (Login)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-500 text-sm"></i>
+                    <input type="text" name="username" required placeholder="admin yoki tashkilot logini" class="w-full pl-11 pr-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-200">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Parol</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500 text-sm"></i>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full pl-11 pr-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-200">
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 border border-white/10 mt-2">
+                Kirish <i class="fa-solid fa-arrow-right-to-bracket ml-1.5"></i>
+            </button>
+        </form>
+        
+        <div class="mt-8 text-center text-[10px] text-slate-500">
+            &copy; 2026 BioTime Control. Barcha huquqlar himoyalangan.
+        </div>
+    </div>
+
+</body>
+</html>

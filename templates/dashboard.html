@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioTime Cloud - Super Admin Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Outfit Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for beautiful charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        darkBg: '#090D1A',
+                        cardBg: '#131A30',
+                        glassBorder: 'rgba(255, 255, 255, 0.05)',
+                        glowBlue: 'rgba(59, 130, 246, 0.15)',
+                        accentBlue: '#2563EB',
+                        accentCyan: '#06B6D4',
+                        accentPurple: '#8B5CF6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #060913;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(19, 26, 48, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .glass-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.1);
+        }
+        .custom-glow {
+            box-shadow: 0 0 25px rgba(37, 99, 235, 0.2);
+        }
+        .pulse-glow {
+            animation: pulse-animation 2s infinite;
+        }
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 antialiased pb-16">
+
+    <!-- Top Navigation Bar -->
+    <nav class="sticky top-0 z-50 bg-[#060913]/80 backdrop-blur-md border-b border-white/5 px-6 py-4 transition-all duration-300">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid fa-clock-rotate-left text-lg text-white"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                        BioTime Cloud
+                    </span>
+                    <span class="ml-2 px-2.5 py-0.5 text-[10px] uppercase font-bold tracking-widest bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full">
+                        Super Admin
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 bg-slate-900 border border-white/5 rounded-lg text-slate-400">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500 pulse-glow"></span>
+                    <span>Tizim Onlayn</span>
+                </div>
+                
+                <div class="h-8 w-px bg-white/10"></div>
+                
+                <a href="/admin" class="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-750 active:scale-95 text-xs font-semibold rounded-xl border border-white/5 text-white transition-all duration-200" title="Yangilash">
+                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                </a>
+                <a href="/logout" class="flex items-center space-x-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-xs font-bold rounded-xl border border-red-500/20 text-red-400 transition-all duration-200">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Chiqish</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-6 mt-8">
+        
+        <!-- Header Section -->
+        <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div>
+                <h1 class="text-3xl font-extrabold text-white tracking-tight">Super Admin Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Barcha ulangan mijozlar, terminallar faolligi va tizim litsenziyalarini boshqarish.</p>
+            </div>
+            
+            <!-- Quick search bar (Visual enhancement) -->
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-500 text-sm"></i>
+                <input type="text" id="searchBox" placeholder="Tashkilotlarni qidirish..." onkeyup="filterOrganizations()" class="w-full pl-11 pr-4 py-2.5 bg-cardBg/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all duration-300">
+                <span class="absolute right-3.5 top-3.5 px-1.5 py-0.5 text-[9px] bg-slate-800 text-slate-500 border border-slate-700 rounded font-mono font-bold">CTRL K</span>
+            </div>
+        </div>
+
+        <!-- System Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Stat Card 1 -->
+            <div class="glass-card p-6 rounded-2xl transition-all duration-300 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-building text-9xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Jami Mijozlar</span>
+                    <div class="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                        <i class="fa-solid fa-building text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <span class="text-4xl font-extrabold text-white tracking-tight">{{ organizations|length }}</span>
+                    <span class="ml-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Aktiv</span>
+                </div>
+            </div>
+
+            <!-- Stat Card 2 -->
+            <div class="glass-card p-6 rounded-2xl transition-all duration-300 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-microchip text-9xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Faol Qurilmalar</span>
+                    <div class="h-8 w-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
+                        <i class="fa-solid fa-microchip text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    {% set ns = namespace(t_count=0, e_count=0) %}
+                    {% for org in organizations %}
+                        {% set ns.t_count = ns.t_count + org.terminal_count %}
+                        {% set ns.e_count = ns.e_count + org.employee_count %}
+                    {% endfor %}
+                    <span class="text-4xl font-extrabold text-white tracking-tight">{{ ns.t_count }}</span>
+                    <span class="ml-2 text-xs font-semibold text-slate-400">Terminallar</span>
+                </div>
+            </div>
+
+            <!-- Stat Card 3 -->
+            <div class="glass-card p-6 rounded-2xl transition-all duration-300 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-users text-9xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Jami Ishchilar</span>
+                    <div class="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 border border-violet-500/20">
+                        <i class="fa-solid fa-users text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <span class="text-4xl font-extrabold text-white tracking-tight">{{ ns.e_count }}</span>
+                    <span class="ml-2 text-xs font-semibold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded-full border border-violet-500/20">Sinxron</span>
+                </div>
+            </div>
+
+            <!-- Stat Card 4 -->
+            <div class="glass-card p-6 rounded-2xl transition-all duration-300 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-key text-9xl"></i>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Litsenziyalar</span>
+                    <div class="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
+                        <i class="fa-solid fa-key text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4 font-bold">
+                    {% set ns_l = namespace(blocked=0) %}
+                    {% for org in organizations %}
+                        {% if org.license_status != 'active' %}
+                            {% set ns_l.blocked = ns_l.blocked + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    <span class="text-4xl font-extrabold text-white tracking-tight">{{ organizations|length - ns_l.blocked }}</span>
+                    <span class="text-slate-400 text-sm">/ {{ organizations|length }} faol</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Layout Split -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Side: Interactive Organization Table & Activity Chart -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Chart Panel (Premium Enhancement) -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center">
+                        <i class="fa-solid fa-chart-line text-blue-500 mr-2.5"></i>
+                        Mijozlar Integratsiyasi va Tizim Faolligi
+                    </h2>
+                    <div class="h-64 w-full">
+                        <canvas id="dashboardChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Organization Table -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-bold text-white flex items-center">
+                            <i class="fa-solid fa-folder-tree text-indigo-500 mr-2.5"></i>
+                            Tadbirkorlar va Tashkilotlar
+                        </h2>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 border border-white/5 rounded text-slate-400 font-mono">
+                            Jami: {{ organizations|length }} ta
+                        </span>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-800" id="orgTable">
+                            <thead>
+                                <tr class="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    <th class="pb-3 text-left">Tashkilot nomi</th>
+                                    <th class="pb-3 text-left">Rahbar / Aloqa</th>
+                                    <th class="pb-3 text-center">Faollik</th>
+                                    <th class="pb-3 text-center">Litsenziya</th>
+                                    <th class="pb-3 text-right">Boshqaruv</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800 text-sm">
+                                {% for org in organizations %}
+                                <tr class="hover:bg-slate-850/50 transition-all duration-200 group org-row" data-name="{{ org.name | lower }}">
+                                    <td class="py-4 pr-3">
+                                        <div class="font-bold text-white group-hover:text-blue-400 transition-colors flex items-center">
+                                            <span class="h-2 w-2 rounded-full bg-blue-500 mr-2.5 opacity-60"></span>
+                                            {{ org.name }}
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 font-mono mt-1 flex items-center">
+                                            <span class="bg-slate-900 border border-white/5 px-2 py-0.5 rounded text-slate-400 select-all cursor-pointer font-bold mr-1">
+                                                Kalit: {{ org.api_key }}
+                                            </span>
+                                            <button onclick="navigator.clipboard.writeText('{{ org.api_key }}'); showToast('Kalit ko\'chirildi!')" class="hover:text-white transition-colors" title="Nusxalash">
+                                                <i class="fa-regular fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="py-4">
+                                        <div class="font-medium text-slate-300">{{ org.owner_name or '—' }}</div>
+                                        <div class="text-xs text-slate-500 flex items-center mt-0.5">
+                                            <i class="fa-solid fa-phone text-[10px] mr-1"></i> {{ org.phone or '—' }}
+                                        </div>
+                                    </td>
+                                    <td class="py-4 text-center">
+                                        <div class="text-slate-300 font-medium">
+                                            📟 <span class="font-bold text-white">{{ org.terminal_count }}</span> qurilma
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 mt-0.5">
+                                            👥 {{ org.employee_count }} ishchi | 📝 {{ org.log_count }} log
+                                        </div>
+                                    </td>
+                                    <td class="py-4 text-center">
+                                        {% if org.license_status == 'active' %}
+                                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 mr-1.5"></span>
+                                                Faol ({{ org.license_expires_at }})
+                                            </span>
+                                        {% elif org.license_status == 'expired' %}
+                                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 mr-1.5"></span>
+                                                Tugagan
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20 rounded-full">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-red-500 mr-1.5"></span>
+                                                Bloklangan
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-4 text-right space-x-1.5 whitespace-nowrap">
+                                        <a href="/admin/organizations/{{ org.id }}" class="inline-flex items-center px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-blue-900/20">
+                                            <i class="fa-solid fa-circle-info mr-1.5"></i> Kirish
+                                        </a>
+                                        <form action="/admin/organizations/{{ org.id }}/toggle" method="POST" class="inline">
+                                            <button type="submit" class="px-2.5 py-2 text-xs font-bold {% if org.is_active %}bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20{% else %}bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20{% endif %} border rounded-lg transition-colors duration-200">
+                                                <i class="fa-solid {% if org.is_active %}fa-ban{% else %}fa-check-to-slot{% endif %}"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="py-12 text-center text-slate-500">
+                                        <div class="text-lg">🏢 Tashkilotlar mavjud emas</div>
+                                        <div class="text-xs text-slate-600 mt-2">O'ng tomondagi oyna orqali birinchi mijozni ro'yxatdan o'tkazing.</div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Beautiful Registration Panel -->
+            <div class="space-y-8">
+                <!-- Add Organization Card -->
+                <div class="glass-card p-6 rounded-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 h-24 w-24 bg-gradient-to-bl from-blue-600/10 to-violet-600/0 rounded-full blur-xl"></div>
+                    
+                    <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                        <i class="fa-solid fa-circle-plus text-blue-500 mr-2.5"></i>
+                        Yangi mijozni ulash
+                    </h2>
+                    
+                    <form action="/admin/organizations/create" method="POST" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tashkilot nomi *</label>
+                            <input type="text" name="name" required placeholder="Masalan: MChJ 'BioTime Plus'" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Rahbar yoki Mas'ul</label>
+                            <input type="text" name="owner_name" placeholder="Ism familiya" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Telefon raqam</label>
+                            <input type="text" name="phone" placeholder="+998 (90) 123-4567" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Foydalanuvchi logini *</label>
+                            <input type="text" name="username" required placeholder="Masalan: premium_toshkent" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Parol *</label>
+                            <input type="password" name="password" required placeholder="Parol kiriting" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Litsenziya muddati</label>
+                            <input type="date" name="expires_str" class="w-full px-4 py-3 bg-slate-900 border border-white/5 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                            <p class="text-[10px] text-slate-500 mt-1.5 flex items-center">
+                                <i class="fa-solid fa-circle-info mr-1"></i> Bo'sh qoldirilsa muddatsiz litsenziya beriladi.
+                            </p>
+                        </div>
+                        
+                        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 mt-2 border border-white/10">
+                            <i class="fa-solid fa-rocket mr-1.5"></i> Ro'yxatdan o'tkazish
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Toast notifications system -->
+                <div id="toast" class="fixed bottom-6 right-6 px-5 py-3.5 bg-slate-900/90 border border-white/10 text-white rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-semibold translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
+                    <span class="h-2 w-2 rounded-full bg-blue-500 pulse-glow"></span>
+                    <span id="toastMsg">Xabar</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Organization search/filtering
+        function filterOrganizations() {
+            const input = document.getElementById('searchBox');
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementsByClassName('org-row');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const name = rows[i].getAttribute('data-name');
+                if (name.includes(filter)) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+
+        // Toast alert system
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Beautiful chart configuration
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctx = document.getElementById('dashboardChart').getContext('2d');
+            
+            const labels = {{ days_labels | tojson }};
+            const logsData = {{ daily_logs | tojson }};
+            const activeEmpsData = {{ daily_active_emps | tojson }};
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Faol Xodimlar Soni',
+                            data: activeEmpsData,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#3B82F6',
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: 'Keldi-ketdilar Soni',
+                            data: logsData,
+                            borderColor: '#8B5CF6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#8B5CF6'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94A3B8',
+                                font: {
+                                    family: 'Outfit',
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.04)'
+                            },
+                            ticks: {
+                                color: '#64748B',
+                                font: {
+                                    family: 'Outfit'
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#64748B',
+                                font: {
+                                    family: 'Outfit'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
