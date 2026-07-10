@@ -17,6 +17,10 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BioTime Control - Cloud Super Admin Server")
 
+@app.get("/")
+def root_redirect():
+    return RedirectResponse(url="/admin")
+
 # Create templates directory
 os.makedirs("templates", exist_ok=True)
 os.makedirs("uploads/logs", exist_ok=True)
