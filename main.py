@@ -634,6 +634,148 @@ def send_command(
     return RedirectResponse(url=f"/admin/organizations/{org_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/admin/organizations/{org_id}/add_employee")
+async def add_employee_from_admin(
+    org_id: int,
+    employee_id: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    department: str = Form(""),
+    phone: str = Form(""),
+    terminal_id: int = Form(None),
+    face_image: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    if user["role"] == "client":
+        raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
+
+    # 1. Base64 encode face image if uploaded
+    face_b64 = None
+    if face_image and face_image.filename:
+        try:
+            content = await face_image.read()
+            face_b64 = base64.b64encode(content).decode("utf-8")
+        except Exception as e:
+            print(f"Failed to read upload: {e}")
+
+    # 2. Save/Update in Cloud Database
+    emp = db.query(models.Employee).filter(
+        models.Employee.organization_id == org_id,
+        models.Employee.employee_id == employee_id
+    ).first()
+
+    if emp:
+        emp.first_name = first_name
+        emp.last_name = last_name
+        emp.department = department
+        emp.phone = phone
+        if face_b64:
+            emp.face_image = face_b64
+    else:
+        new_emp = models.Employee(
+            organization_id=org_id,
+            employee_id=employee_id,
+            first_name=first_name,
+            last_name=last_name,
+            department=department,
+            phone=phone,
+            face_image=face_b64,
+            is_active=True
+        )
+        db.add(new_emp)
+
+    # 3. Create a RemoteCommand for local sync
+    payload = {
+        "employee_id": employee_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "department": department,
+        "phone": phone,
+        "face_image": face_b64,
+        "terminal_id": terminal_id
+    }
+
+    new_cmd = models.RemoteCommand(
+        id=str(uuid.uuid4()),
+        organization_id=org_id,
+        command_type="add_employee",
+        payload=json.dumps(payload),
+        status="pending"
+    )
+    db.add(new_cmd)
+    db.commit()
+
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/organizations/{org_id}/add_terminal")
+def add_terminal_from_admin(
+    org_id: int,
+    local_terminal_id: int = Form(...),
+    name: str = Form(...),
+    ip: str = Form(...),
+    port: int = Form(80),
+    username: str = Form("admin"),
+    password: str = Form(...),
+    conn_type: str = Form("isapi"),
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    if user["role"] == "client":
+        raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
+
+    # 1. Save/Update in Cloud Database
+    term = db.query(models.Terminal).filter(
+        models.Terminal.organization_id == org_id,
+        models.Terminal.local_terminal_id == local_terminal_id
+    ).first()
+
+    if term:
+        term.name = name
+        term.ip = ip
+        term.port = port
+        term.username = username
+        term.status = "offline"
+    else:
+        new_term = models.Terminal(
+            organization_id=org_id,
+            local_terminal_id=local_terminal_id,
+            name=name,
+            ip=ip,
+            port=port,
+            username=username,
+            status="offline"
+        )
+        db.add(new_term)
+
+    # 2. Create a RemoteCommand for local sync
+    payload = {
+        "local_terminal_id": local_terminal_id,
+        "name": name,
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password,
+        "conn_type": conn_type,
+        "use_https": 0,
+        "is_attendance": 1,
+        "attendance_direction": "all"
+    }
+
+    new_cmd = models.RemoteCommand(
+        id=str(uuid.uuid4()),
+        organization_id=org_id,
+        command_type="add_terminal",
+        payload=json.dumps(payload),
+        status="pending"
+    )
+    db.add(new_cmd)
+    db.commit()
+
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @app.get("/admin/downloads/logs/{command_id}")
 def download_command_logs(command_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     cmd = db.query(models.RemoteCommand).filter(models.RemoteCommand.id == command_id).first()

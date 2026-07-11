@@ -418,12 +418,59 @@
 
                 <!-- Tab 1: Employees List -->
                 <div id="modalTabContentEmployees" class="space-y-4">
-                    <div id="modalEmployeesList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2">
+                    <div id="modalEmployeesList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[250px] overflow-y-auto pr-2">
                         <!-- Employee Cards will be appended here -->
+                    </div>
+                    
+                    <!-- Collapsible Add Employee Panel -->
+                    <div class="border border-white/5 rounded-xl overflow-hidden bg-cardBg/20">
+                        <button onclick="toggleCollapse('collapseAddEmployee')" class="w-full px-4 py-3 bg-slate-900/50 hover:bg-slate-900 text-left text-xs font-bold uppercase tracking-wider text-slate-300 flex justify-between items-center transition-all">
+                            <span><i class="fa-solid fa-user-plus text-blue-500 mr-2"></i> Yangi xodim qo'shish</span>
+                            <i id="icon-collapseAddEmployee" class="fa-solid fa-chevron-down transition-transform"></i>
+                        </button>
+                        <div id="collapseAddEmployee" class="hidden p-4 border-t border-white/5 space-y-3 bg-[#0c101d]">
+                            <form id="addEmployeeForm" action="" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Xodim ID *</label>
+                                    <input type="text" name="employee_id" required placeholder="Masalan: 1005" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Telefon</label>
+                                    <input type="text" name="phone" placeholder="+998 (90) 123-4567" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Ismi *</label>
+                                    <input type="text" name="first_name" required placeholder="Masalan: Anvar" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Familiyasi *</label>
+                                    <input type="text" name="last_name" required placeholder="Masalan: Karimov" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Bo'lim nomi</label>
+                                    <input type="text" name="department" placeholder="Masalan: Sotuv bo'limi" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Terminalga yuborish (ISAPI) *</label>
+                                    <select id="selectEmployeeTerminal" name="terminal_id" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
+                                        <option value="">Lokal tizimga saqlash (terminalga yubormaslik)</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Yuz surati (JPEG rasm)</label>
+                                    <input type="file" name="face_image" accept="image/jpeg" class="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700">
+                                </div>
+                                <div class="md:col-span-2 flex justify-end">
+                                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-blue-900/20">
+                                        <i class="fa-solid fa-user-plus mr-1"></i> Xodimni qo'shish
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tab 2: Terminals List -->
+                <!-- Tab 2: Terminallar List -->
                 <div id="modalTabContentTerminals" class="hidden space-y-4">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-slate-800">
@@ -440,6 +487,54 @@
                                 <!-- Terminal Rows will be appended here -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Collapsible Add Terminal Panel -->
+                    <div class="border border-white/5 rounded-xl overflow-hidden bg-cardBg/20">
+                        <button onclick="toggleCollapse('collapseAddTerminal')" class="w-full px-4 py-3 bg-slate-900/50 hover:bg-slate-900 text-left text-xs font-bold uppercase tracking-wider text-slate-300 flex justify-between items-center transition-all">
+                            <span><i class="fa-solid fa-circle-plus text-cyan-400 mr-2"></i> Yangi terminal ulash</span>
+                            <i id="icon-collapseAddTerminal" class="fa-solid fa-chevron-down transition-transform"></i>
+                        </button>
+                        <div id="collapseAddTerminal" class="hidden p-4 border-t border-white/5 space-y-3 bg-[#0c101d]">
+                            <form id="addTerminalForm" action="" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Terminal ID *</label>
+                                    <input type="number" name="local_terminal_id" required placeholder="Masalan: 8" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Terminal Nomi *</label>
+                                    <input type="text" name="name" required placeholder="Masalan: Kirish darvozasi" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">IP Manzil *</label>
+                                    <input type="text" name="ip" required placeholder="Masalan: 192.168.1.100" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Port *</label>
+                                    <input type="number" name="port" required value="80" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Login *</label>
+                                    <input type="text" name="username" required value="admin" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Parol *</label>
+                                    <input type="password" name="password" required placeholder="Terminal paroli" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Ulanish turi *</label>
+                                    <select name="conn_type" class="w-full px-3 py-2 bg-slate-950 border border-white/5 rounded-lg text-xs text-white focus:outline-none focus:border-cyan-500">
+                                        <option value="isapi">ISAPI (IP/Lokal ulanish)</option>
+                                        <option value="isup">ISUP / EHome (Push / VPS server orqali)</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end justify-end">
+                                    <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded-lg transition-all shadow-md shadow-cyan-900/20">
+                                        <i class="fa-solid fa-circle-plus mr-1"></i> Terminalni qo'shish
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -463,6 +558,19 @@
             openOrgModal(orgId);
         }
 
+        // Toggle collapsible panels
+        function toggleCollapse(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                el.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
         let activeModalTab = 'employees';
         let cachedOrgData = null;
 
@@ -471,6 +579,19 @@
             const modal = document.getElementById('orgModal');
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+
+            // Reset forms and set dynamic actions
+            document.getElementById('addEmployeeForm').reset();
+            document.getElementById('addEmployeeForm').action = `/admin/organizations/${orgId}/add_employee`;
+            
+            document.getElementById('addTerminalForm').reset();
+            document.getElementById('addTerminalForm').action = `/admin/organizations/${orgId}/add_terminal`;
+
+            // Collapse forms by default
+            document.getElementById('collapseAddEmployee').classList.add('hidden');
+            document.getElementById('icon-collapseAddEmployee').classList.remove('rotate-180');
+            document.getElementById('collapseAddTerminal').classList.add('hidden');
+            document.getElementById('icon-collapseAddTerminal').classList.remove('rotate-180');
 
             // Loading state
             document.getElementById('modalOrgName').innerText = "Yuklanmoqda...";
@@ -504,6 +625,17 @@
                 document.getElementById('modalOrgApiKey').innerText = data.org.api_key;
                 document.getElementById('modalEmployeesCount').innerText = data.employees.length;
                 document.getElementById('modalTerminalsCount').innerText = data.terminals.length;
+
+                // Populate terminal select dropdown for adding employee
+                let termOptions = '<option value="">Lokal tizimga saqlash (terminalga yubormaslik)</option>';
+                data.terminals.forEach(term => {
+                    if (term.status === 'online') {
+                        termOptions += `<option value="${term.local_terminal_id}">${term.name} (ID: ${term.local_terminal_id} - ${term.ip})</option>`;
+                    } else {
+                        termOptions += `<option value="${term.local_terminal_id}" disabled>${term.name} (ID: ${term.local_terminal_id} - Oflayn)</option>`;
+                    }
+                });
+                document.getElementById('selectEmployeeTerminal').innerHTML = termOptions;
 
                 // Employees HTML
                 let empHtml = '';
