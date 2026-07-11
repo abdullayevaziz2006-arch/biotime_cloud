@@ -663,6 +663,14 @@ async def add_employee_from_admin(
     if user["role"] == "client":
         raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
 
+    # 1. Read face image content once and cache it
+    file_content = None
+    if face_image and face_image.filename:
+        try:
+            file_content = await face_image.read()
+        except Exception as e:
+            print(f"Failed to read face_image: {e}")
+
     # Debug details
     debug_info = f"""
     --- add_employee_from_admin Debug ---
@@ -677,20 +685,17 @@ async def add_employee_from_admin(
     """
     if face_image:
         debug_info += f"face_image.filename: '{face_image.filename}'\n"
-        try:
-            content = await face_image.read()
-            debug_info += f"face_image content length: {len(content)} bytes\n"
-            # Reset read pointer
-            await face_image.seek(0)
-        except Exception as e:
-            debug_info += f"Error reading face_image: {e}\n"
+        if file_content:
+            debug_info += f"face_image content length: {len(file_content)} bytes\n"
+        else:
+            debug_info += "face_image content is empty\n"
     else:
         debug_info += "face_image is None\n"
         
     with open("debug_upload.txt", "w", encoding="utf-8") as f:
         f.write(debug_info)
 
-    # 1. Convert terminal_id to int safely
+    # 2. Convert terminal_id to int safely
     term_id_int = None
     if terminal_id and terminal_id.strip() and terminal_id.strip() != "None" and terminal_id.strip() != "null":
         try:
@@ -698,17 +703,12 @@ async def add_employee_from_admin(
         except ValueError:
             pass
 
-    # 2. Base64 encode face image if uploaded
+    # 3. Base64 encode face image from cached bytes
     face_b64 = None
-    if face_image and face_image.filename:
-        try:
-            content = await face_image.read()
-            if content:
-                face_b64 = base64.b64encode(content).decode("utf-8")
-        except Exception as e:
-            print(f"Failed to read upload: {e}")
+    if file_content:
+        face_b64 = base64.b64encode(file_content).decode("utf-8")
 
-    # 3. Save/Update in Cloud Database
+    # 4. Save/Update in Cloud Database
     emp = db.query(models.Employee).filter(
         models.Employee.organization_id == org_id,
         models.Employee.employee_id == employee_id
@@ -734,7 +734,7 @@ async def add_employee_from_admin(
         )
         db.add(new_emp)
 
-    # 4. Create a RemoteCommand for local sync
+    # 5. Create a RemoteCommand for local sync
     payload = {
         "employee_id": employee_id,
         "first_name": first_name,
