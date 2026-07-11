@@ -2,6 +2,7 @@ import os
 import uuid
 import datetime
 import json
+import base64
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException, Header, status, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
