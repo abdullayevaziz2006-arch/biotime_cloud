@@ -192,17 +192,6 @@
             <!-- Left Side: Interactive Organization Table & Activity Chart -->
             <div class="lg:col-span-2 space-y-8">
                 
-                <!-- Chart Panel (Premium Enhancement) -->
-                <div class="glass-card p-6 rounded-2xl">
-                    <h2 class="text-lg font-bold text-white mb-4 flex items-center">
-                        <i class="fa-solid fa-chart-line text-blue-500 mr-2.5"></i>
-                        Mijozlar Integratsiyasi va Tizim Faolligi
-                    </h2>
-                    <div class="h-64 w-full">
-                        <canvas id="dashboardChart"></canvas>
-                    </div>
-                </div>
-
                 <!-- Organization Table -->
                 <div class="glass-card p-6 rounded-2xl" id="orgTableSection">
                     <div class="flex items-center justify-between mb-6">
@@ -296,6 +285,17 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Chart Panel (Premium Enhancement) -->
+                <div class="glass-card p-6 rounded-2xl">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center">
+                        <i class="fa-solid fa-chart-line text-blue-500 mr-2.5"></i>
+                        Mijozlar Integratsiyasi va Tizim Faolligi
+                    </h2>
+                    <div class="h-64 w-full">
+                        <canvas id="dashboardChart"></canvas>
                     </div>
                 </div>
             </div>
