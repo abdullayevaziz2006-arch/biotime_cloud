@@ -658,8 +658,13 @@
                                     <div class="text-[10px] text-slate-500 truncate mt-0.5">ID: ${emp.employee_id} | Bo'lim: ${emp.department}</div>
                                     <div class="text-[9px] text-slate-500 truncate mt-0.5"><i class="fa-solid fa-phone"></i> ${emp.phone}</div>
                                 </div>
-                                <div>
+                                <div class="flex items-center space-x-2">
                                     <span class="px-2 py-0.5 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">Faol</span>
+                                    <form action="/admin/organizations/${data.org.id}/employees/${emp.employee_id}/delete" method="POST" onsubmit="return confirm('Haqiqatan ham ushbu xodimni butunlay o\'chirib tashlamoqchimisiz? (Bu uni lokal dastur va terminallardan ham o\'chiradi)')" class="m-0">
+                                        <button type="submit" class="h-7 w-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 flex items-center justify-center transition-colors" title="Xodimni o'chirish">
+                                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         `;
