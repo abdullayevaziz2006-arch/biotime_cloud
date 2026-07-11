@@ -634,6 +634,19 @@ def send_command(
     return RedirectResponse(url=f"/admin/organizations/{org_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.get("/admin/debug_upload")
+def get_debug_upload(
+    user: dict = Depends(get_current_user)
+):
+    from fastapi.responses import HTMLResponse
+    if user["role"] == "client":
+        raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
+    if os.path.exists("debug_upload.txt"):
+        with open("debug_upload.txt", "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f"<pre>{f.read()}</pre>")
+    return HTMLResponse(content="No debug file found")
+
+
 @app.post("/admin/organizations/{org_id}/add_employee")
 async def add_employee_from_admin(
     org_id: int,
@@ -642,7 +655,7 @@ async def add_employee_from_admin(
     last_name: str = Form(...),
     department: str = Form(""),
     phone: str = Form(""),
-    terminal_id: int = Form(None),
+    terminal_id: str = Form(None),
     face_image: UploadFile = File(None),
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
@@ -650,16 +663,52 @@ async def add_employee_from_admin(
     if user["role"] == "client":
         raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
 
-    # 1. Base64 encode face image if uploaded
+    # Debug details
+    debug_info = f"""
+    --- add_employee_from_admin Debug ---
+    org_id: {org_id}
+    employee_id: {employee_id}
+    first_name: {first_name}
+    last_name: {last_name}
+    department: {department}
+    phone: {phone}
+    terminal_id raw: {terminal_id} (type: {type(terminal_id)})
+    face_image raw: {face_image}
+    """
+    if face_image:
+        debug_info += f"face_image.filename: '{face_image.filename}'\n"
+        try:
+            content = await face_image.read()
+            debug_info += f"face_image content length: {len(content)} bytes\n"
+            # Reset read pointer
+            await face_image.seek(0)
+        except Exception as e:
+            debug_info += f"Error reading face_image: {e}\n"
+    else:
+        debug_info += "face_image is None\n"
+        
+    with open("debug_upload.txt", "w", encoding="utf-8") as f:
+        f.write(debug_info)
+
+    # 1. Convert terminal_id to int safely
+    term_id_int = None
+    if terminal_id and terminal_id.strip() and terminal_id.strip() != "None" and terminal_id.strip() != "null":
+        try:
+            term_id_int = int(terminal_id.strip())
+        except ValueError:
+            pass
+
+    # 2. Base64 encode face image if uploaded
     face_b64 = None
     if face_image and face_image.filename:
         try:
             content = await face_image.read()
-            face_b64 = base64.b64encode(content).decode("utf-8")
+            if content:
+                face_b64 = base64.b64encode(content).decode("utf-8")
         except Exception as e:
             print(f"Failed to read upload: {e}")
 
-    # 2. Save/Update in Cloud Database
+    # 3. Save/Update in Cloud Database
     emp = db.query(models.Employee).filter(
         models.Employee.organization_id == org_id,
         models.Employee.employee_id == employee_id
@@ -685,7 +734,7 @@ async def add_employee_from_admin(
         )
         db.add(new_emp)
 
-    # 3. Create a RemoteCommand for local sync
+    # 4. Create a RemoteCommand for local sync
     payload = {
         "employee_id": employee_id,
         "first_name": first_name,
@@ -693,7 +742,7 @@ async def add_employee_from_admin(
         "department": department,
         "phone": phone,
         "face_image": face_b64,
-        "terminal_id": terminal_id
+        "terminal_id": term_id_int
     }
 
     new_cmd = models.RemoteCommand(
