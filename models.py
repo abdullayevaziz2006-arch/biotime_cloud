@@ -59,6 +59,7 @@ class Employee(Base):
     department = Column(String, default="")
     phone = Column(String, default="")
     is_active = Column(Boolean, default=True)
+    face_image = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     organization = relationship("Organization", back_populates="employees")

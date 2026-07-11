@@ -23,6 +23,7 @@ class EmployeeSync(BaseModel):
     department: str
     phone: str
     is_active: int  # 1 or 0
+    face_image: Optional[str] = None
 
 
 # Attendance log information sent in heartbeat

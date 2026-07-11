@@ -15,6 +15,13 @@ import schemas
 # Create tables
 Base.metadata.create_all(bind=engine)
 
+try:
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE employees ADD COLUMN face_image TEXT;"))
+except Exception:
+    pass  # Column already exists or error handled
+
 app = FastAPI(title="BioTime Control - Cloud Super Admin Server")
 
 @app.get("/")
@@ -136,6 +143,8 @@ def client_heartbeat(
             employee.department = e_data.department
             employee.phone = e_data.phone
             employee.is_active = is_active_bool
+            if e_data.face_image:
+                employee.face_image = e_data.face_image
         else:
             new_employee = models.Employee(
                 organization_id=org.id,
@@ -144,7 +153,8 @@ def client_heartbeat(
                 last_name=e_data.last_name,
                 department=e_data.department,
                 phone=e_data.phone,
-                is_active=is_active_bool
+                is_active=is_active_bool,
+                face_image=e_data.face_image
             )
             db.add(new_employee)
 
@@ -479,6 +489,110 @@ def view_organization_detail(
             "is_admin": user["role"] == "super_admin"
         }
     )
+
+
+@app.get("/admin/api/organizations/{org_id}/details")
+def get_organization_details_json(
+    org_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    if user["role"] == "client" and user["org"].id != org_id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+        
+    org = db.query(models.Organization).filter(models.Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    terminals = db.query(models.Terminal).filter(models.Terminal.organization_id == org_id).all()
+    employees = db.query(models.Employee).filter(models.Employee.organization_id == org_id, models.Employee.is_active == True).all()
+    commands = db.query(models.RemoteCommand).filter(models.RemoteCommand.organization_id == org_id).order_by(models.RemoteCommand.created_at.desc()).limit(50).all()
+
+    # Calculate real stats for today
+    today_str = datetime.date.today().isoformat()
+    today_logs = db.query(models.AttendanceLog).filter(
+        models.AttendanceLog.organization_id == org_id,
+        models.AttendanceLog.event_time.like(f"{today_str}%")
+    ).all()
+    
+    active_emp_ids = {e.employee_id for e in employees}
+    present_emp_ids = {l.employee_id for l in today_logs if l.employee_id in active_emp_ids}
+    present_count = len(present_emp_ids)
+    absent_count = len(active_emp_ids - present_emp_ids)
+    
+    first_logs = {}
+    for l in today_logs:
+        if l.employee_id not in active_emp_ids:
+            continue
+        t_part = ""
+        if "T" in l.event_time:
+            t_part = l.event_time.split("T")[1][:5]
+        elif " " in l.event_time:
+            t_part = l.event_time.split(" ")[1][:5]
+            
+        if l.employee_id not in first_logs or l.event_time < first_logs[l.employee_id]["time"]:
+            first_logs[l.employee_id] = {"time": l.event_time, "t_part": t_part}
+            
+    late_count = 0
+    for emp_id, info in first_logs.items():
+        if info["t_part"] > "09:00":
+            late_count += 1
+            
+    normal_present_count = max(0, present_count - late_count)
+
+    return {
+        "org": {
+            "id": org.id,
+            "name": org.name,
+            "owner_name": org.owner_name or '—',
+            "phone": org.phone or '—',
+            "api_key": org.api_key,
+            "is_active": org.is_active,
+            "license_expires_at": org.license_expires_at.strftime('%Y-%m-%d') if org.license_expires_at else 'Muddatsiz',
+        },
+        "terminals": [
+            {
+                "local_terminal_id": t.local_terminal_id,
+                "name": t.name,
+                "model": t.model or 'Noma\'lum',
+                "serial": t.serial or 'Seriya yo\'q',
+                "ip": t.ip,
+                "port": t.port,
+                "username": t.username,
+                "status": t.status,
+                "last_seen": t.last_seen.strftime('%H:%M:%S') if t.last_seen else 'Noma\'lum'
+            }
+            for t in terminals
+        ],
+        "employees": [
+            {
+                "employee_id": e.employee_id,
+                "first_name": e.first_name,
+                "last_name": e.last_name,
+                "department": e.department or 'Bo\'limsiz',
+                "phone": e.phone or 'Telefon yo\'q',
+                "is_active": e.is_active,
+                "face_image": e.face_image
+            }
+            for e in employees
+        ],
+        "commands": [
+            {
+                "id": c.id,
+                "command_type": c.command_type,
+                "payload": c.payload,
+                "status": c.status,
+                "response_data": c.response_data,
+                "created_at": c.created_at.strftime('%H:%M:%S')
+            }
+            for c in commands
+        ],
+        "stats": {
+            "present": normal_present_count,
+            "absent": absent_count,
+            "late": late_count
+        }
+    }
 
 
 @app.post("/admin/organizations/{org_id}/command")
