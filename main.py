@@ -720,6 +720,7 @@ async def add_employee_from_admin(
         emp.last_name = last_name
         emp.department = department
         emp.phone = phone
+        emp.is_active = True
         if face_b64:
             emp.face_image = face_b64
     else:
