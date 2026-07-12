@@ -262,9 +262,20 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
     body = await request.body()
     xml_str = body.decode("utf-8", errors="ignore")
     
+    print(f"LOG: /isup_event body length={len(xml_str)}, start={xml_str[:150]!r}")
+    
+    xml_clean = xml_str.strip()
+    if not xml_clean:
+        print("LOG: Empty body, returning 200 OK")
+        return Response(content="OK", media_type="text/plain")
+        
     try:
         import xml.etree.ElementTree as ET
-        root = ET.fromstring(xml_str)
+        if not xml_clean.startswith("<"):
+            print("LOG: Warning: body does not start with '<', returning 200 OK")
+            return Response(content="OK", media_type="text/plain")
+            
+        root = ET.fromstring(xml_clean)
         
         # 1. Register/Heartbeat
         if root.tag == "Register" or root.find("DeviceID") is not None:
