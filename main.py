@@ -1081,6 +1081,7 @@ def add_terminal_from_admin(
     password: str = Form(...),
     conn_type: str = Form("isapi"),
     serial: str = Form(""),
+    mac: str = Form(""),
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
@@ -1099,6 +1100,7 @@ def add_terminal_from_admin(
         term.port = port
         term.username = username
         term.serial = serial
+        term.mac = mac.strip()
         term.status = "offline"
     else:
         new_term = models.Terminal(
@@ -1109,6 +1111,7 @@ def add_terminal_from_admin(
             port=port,
             username=username,
             serial=serial,
+            mac=mac.strip(),
             status="offline"
         )
         db.add(new_term)
@@ -1123,6 +1126,7 @@ def add_terminal_from_admin(
         "password": password,
         "conn_type": conn_type,
         "serial": serial,
+        "mac": mac.strip(),
         "use_https": 0,
         "is_attendance": 1,
         "attendance_direction": "all"
