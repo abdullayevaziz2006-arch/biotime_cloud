@@ -19,3 +19,6 @@ env/
 
 # Uploaded logs/backups
 uploads/
+
+# Large updates zip files
+static/updates/*.zip

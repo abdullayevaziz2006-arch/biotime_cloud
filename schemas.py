@@ -43,6 +43,7 @@ class HeartbeatRequest(BaseModel):
     today_stats: Dict[str, Any]
     unsynced_logs: List[AttendanceLogSync]
     unsynced_employees: List[EmployeeSync]
+    platform: Optional[str] = "win64"
 
 
 # Command Response Schema (sent from server to client in heartbeat)
@@ -57,6 +58,9 @@ class HeartbeatResponse(BaseModel):
     status: str
     license_status: str  # active, blocked, expired
     pending_commands: List[PendingCommand]
+    latest_version: Optional[str] = None
+    update_url: Optional[str] = None
+    release_notes: Optional[str] = None
 
 
 # Command Execution Result (sent from client to server)

@@ -25,6 +25,10 @@ except Exception:
 
 app = FastAPI(title="BioTime Control - Cloud Super Admin Server")
 
+# Create static directory
+os.makedirs("static/updates", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.get("/")
 def root_redirect():
     return RedirectResponse(url="/admin")
@@ -199,11 +203,151 @@ def client_heartbeat(
         
     db.commit()
 
+    # 6. Check for updates
+    latest_version = None
+    update_url = None
+    release_notes = None
+
+    try:
+        config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "version_config.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding="utf-8") as f:
+                ver_config = json.load(f)
+            
+            latest_ver = ver_config.get("latest_version")
+            
+            # Helper to compare versions
+            def is_version_older(current: str, latest: str) -> bool:
+                try:
+                    c_parts = [int(x) for x in current.split(".")]
+                    l_parts = [int(x) for x in latest.split(".")]
+                    while len(c_parts) < 3: c_parts.append(0)
+                    while len(l_parts) < 3: l_parts.append(0)
+                    return c_parts < l_parts
+                except Exception:
+                    return current != latest
+
+            if latest_ver and is_version_older(req.app_version, latest_ver):
+                latest_version = latest_ver
+                release_notes = ver_config.get("release_notes", "")
+                if req.platform == "win7_x86":
+                    update_url = ver_config.get("download_url_win7_x86")
+                else:
+                    update_url = ver_config.get("download_url_win64")
+    except Exception:
+        pass
+
     return schemas.HeartbeatResponse(
         status="ok",
         license_status=license_status,
-        pending_commands=commands_payload
+        pending_commands=commands_payload,
+        latest_version=latest_version,
+        update_url=update_url,
+        release_notes=release_notes
     )
+
+
+@app.post("/isup_event")
+async def isup_event(request: Request, db: Session = Depends(get_db)):
+    from fastapi import Response
+    body = await request.body()
+    xml_str = body.decode("utf-8", errors="ignore")
+    
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(xml_str)
+        
+        # 1. Register/Heartbeat
+        if root.tag == "Register" or root.find("DeviceID") is not None:
+            device_id = root.findtext("DeviceID") or root.findtext("deviceID")
+            device_ip = root.findtext("DeviceIP") or root.findtext("deviceIP")
+            
+            if device_id:
+                terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
+                if terminal:
+                    terminal.status = "online"
+                    if device_ip:
+                        terminal.ip = device_ip
+                    terminal.last_seen = datetime.datetime.utcnow()
+                    
+                    device_model = root.findtext("DeviceModel")
+                    if device_model:
+                        terminal.model = device_model
+                    fw = root.findtext("FirmwareVersion")
+                    if fw:
+                        terminal.firmware = fw
+                    db.commit()
+            
+            xml_resp = (
+                '<?xml version="1.0" encoding="utf-8"?>\n'
+                '<ResponseStatus>\n'
+                '  <requestURL>isup_event</requestURL>\n'
+                '  <statusCode>1</statusCode>\n'
+                '  <statusString>OK</statusString>\n'
+                '</ResponseStatus>'
+            )
+            return Response(content=xml_resp, media_type="application/xml")
+            
+        # 2. Attendance Event
+        emp_no_tag = root.find(".//employeeNoString") or root.find(".//employeeNo")
+        event_time_tag = root.find(".//eventTime") or root.find(".//dateTime") or root.find(".//time")
+        device_id_tag = root.find(".//deviceID") or root.find(".//DeviceID") or root.find(".//serialNumber")
+        
+        if emp_no_tag is not None and event_time_tag is not None:
+            emp_id = emp_no_tag.text
+            event_time = event_time_tag.text
+            device_id = device_id_tag.text if device_id_tag is not None else "Unknown"
+            
+            event_time = event_time.replace("T", " ")
+            if "+" in event_time:
+                event_time = event_time.split("+")[0]
+            if "Z" in event_time:
+                event_time = event_time.replace("Z", "")
+            event_time = event_time.strip()
+            
+            direction = root.find(".//attendanceStatus")
+            event_type = "checkin"
+            if direction is not None and direction.text == "checkOut":
+                event_type = "checkout"
+                
+            terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
+            if terminal:
+                org_id = terminal.organization_id
+                
+                log_exists = db.query(models.AttendanceLog).filter(
+                    models.AttendanceLog.organization_id == org_id,
+                    models.AttendanceLog.employee_id == emp_id,
+                    models.AttendanceLog.event_time == event_time,
+                    models.AttendanceLog.event_type == event_type
+                ).first()
+                
+                if not log_exists:
+                    new_log = models.AttendanceLog(
+                        organization_id=org_id,
+                        employee_id=emp_id,
+                        terminal_id=terminal.local_terminal_id,
+                        event_time=event_time,
+                        event_type=event_type,
+                        raw_data=xml_str
+                    )
+                    db.add(new_log)
+                    
+                terminal.status = "online"
+                terminal.last_seen = datetime.datetime.utcnow()
+                db.commit()
+                
+        xml_resp = (
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<ResponseStatus>\n'
+            '  <requestURL>isup_event</requestURL>\n'
+            '  <statusCode>1</statusCode>\n'
+            '  <statusString>OK</statusString>\n'
+            '</ResponseStatus>'
+        )
+        return Response(content=xml_resp, media_type="application/xml")
+        
+    except Exception as e:
+        return Response(status_code=500, content=str(e))
 
 
 @app.post("/api/v1/client/commands/result")
@@ -808,6 +952,7 @@ def add_terminal_from_admin(
     username: str = Form("admin"),
     password: str = Form(...),
     conn_type: str = Form("isapi"),
+    serial: str = Form(""),
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
@@ -825,6 +970,7 @@ def add_terminal_from_admin(
         term.ip = ip
         term.port = port
         term.username = username
+        term.serial = serial
         term.status = "offline"
     else:
         new_term = models.Terminal(
@@ -834,6 +980,7 @@ def add_terminal_from_admin(
             ip=ip,
             port=port,
             username=username,
+            serial=serial,
             status="offline"
         )
         db.add(new_term)
@@ -847,6 +994,7 @@ def add_terminal_from_admin(
         "username": username,
         "password": password,
         "conn_type": conn_type,
+        "serial": serial,
         "use_https": 0,
         "is_attendance": 1,
         "attendance_direction": "all"

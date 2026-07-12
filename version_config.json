@@ -1,0 +1,6 @@
+{
+  "latest_version": "1.1.0",
+  "download_url_win64": "http://127.0.0.1:8000/static/updates/BioTime_Control_v1.2.zip",
+  "download_url_win7_x86": "http://127.0.0.1:8000/static/updates/BioTime_Control_v1.2_win7_x86.zip",
+  "release_notes": "Yuz aniqlash tezlashtirildi va avtomatik yangilanish tizimi qo'shildi."
+}
