@@ -1141,6 +1141,44 @@ def add_terminal_from_admin(
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/admin/organizations/{org_id}/terminals/{local_terminal_id}/delete")
+def delete_terminal_from_admin(
+    org_id: int,
+    local_terminal_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    if user["role"] == "client":
+        raise HTTPException(status_code=403, detail="Ruxsat etilmagan")
+
+    # 1. Delete from Cloud Database
+    term = db.query(models.Terminal).filter(
+        models.Terminal.organization_id == org_id,
+        models.Terminal.local_terminal_id == local_terminal_id
+    ).first()
+
+    if term:
+        db.delete(term)
+        db.commit()
+
+    # 2. Create RemoteCommand to delete from local client app database
+    payload = {
+        "local_terminal_id": local_terminal_id
+    }
+
+    new_cmd = models.RemoteCommand(
+        id=str(uuid.uuid4()),
+        organization_id=org_id,
+        command_type="delete_terminal",
+        payload=json.dumps(payload),
+        status="pending"
+    )
+    db.add(new_cmd)
+    db.commit()
+
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @app.get("/admin/downloads/logs/{command_id}")
 def download_command_logs(command_id: str, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     cmd = db.query(models.RemoteCommand).filter(models.RemoteCommand.id == command_id).first()

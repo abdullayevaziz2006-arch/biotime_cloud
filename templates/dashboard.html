@@ -703,9 +703,16 @@
                                     </span>
                                 </td>
                                 <td class="py-3 text-right">
-                                    <button onclick="rebootModalTerminal(${orgId}, ${term.local_terminal_id})" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold rounded-lg border border-red-500/25 transition-colors">
-                                        <i class="fa-solid fa-power-off mr-1"></i> Reboot
-                                    </button>
+                                    <div class="flex items-center justify-end space-x-1.5">
+                                        <button onclick="rebootModalTerminal(${orgId}, ${term.local_terminal_id})" class="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-bold rounded-lg border border-amber-500/25 transition-colors" title="Reboot Terminal">
+                                            <i class="fa-solid fa-power-off"></i>
+                                        </button>
+                                        <form action="/admin/organizations/${orgId}/terminals/${term.local_terminal_id}/delete" method="POST" onsubmit="return confirm('Haqiqatan ham ushbu terminalni o\'chirmoqchimisiz? (Bu uni lokal dasturdan ham o\'chiradi)')" class="m-0">
+                                            <button type="submit" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold rounded-lg border border-red-500/25 transition-colors" title="Terminalni o'chirish">
+                                                <i class="fa-solid fa-trash-can mr-1"></i> O'chirish
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         `;
