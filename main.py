@@ -23,6 +23,15 @@ try:
 except Exception:
     pass  # Column already exists or error handled
 
+# Migrate terminals table for serial, model, firmware columns
+for col in ["serial", "model", "firmware"]:
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(f"ALTER TABLE terminals ADD COLUMN {col} VARCHAR DEFAULT '';"))
+            print(f"MIGRATION: Added column {col} to terminals table.")
+    except Exception as e:
+        pass  # Column already exists
+
 app = FastAPI(title="BioTime Control - Cloud Super Admin Server")
 
 # Create static directory
@@ -347,6 +356,8 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
         return Response(content=xml_resp, media_type="application/xml")
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return Response(status_code=500, content=str(e))
 
 
