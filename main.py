@@ -700,6 +700,15 @@ def view_organization_detail(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    # Update terminal statuses to offline if they haven't sent heartbeats in 3 minutes
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(minutes=3)
+    db.query(models.Terminal).filter(
+        models.Terminal.organization_id == org_id,
+        models.Terminal.status == "online",
+        models.Terminal.last_seen < threshold
+    ).update({models.Terminal.status: "offline"})
+    db.commit()
+
     terminals = db.query(models.Terminal).filter(models.Terminal.organization_id == org_id).all()
     employees = db.query(models.Employee).filter(models.Employee.organization_id == org_id, models.Employee.is_active == True).all()
     logs = db.query(models.AttendanceLog).filter(models.AttendanceLog.organization_id == org_id).order_by(models.AttendanceLog.id.desc()).limit(100).all()
@@ -776,6 +785,15 @@ def get_organization_details_json(
     org = db.query(models.Organization).filter(models.Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Update terminal statuses to offline if they haven't sent heartbeats in 3 minutes
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(minutes=3)
+    db.query(models.Terminal).filter(
+        models.Terminal.organization_id == org_id,
+        models.Terminal.status == "online",
+        models.Terminal.last_seen < threshold
+    ).update({models.Terminal.status: "offline"})
+    db.commit()
 
     terminals = db.query(models.Terminal).filter(models.Terminal.organization_id == org_id).all()
     employees = db.query(models.Employee).filter(models.Employee.organization_id == org_id, models.Employee.is_active == True).all()
