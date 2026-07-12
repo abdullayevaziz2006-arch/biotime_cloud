@@ -298,29 +298,31 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
                     
                 mac_addr = event_data.get("macAddress") or event_data.get("mac")
                 
-                terminal = None
+                terminals = []
                 if device_id:
-                    terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
+                    terminals = db.query(models.Terminal).filter(models.Terminal.serial == device_id).all()
                 
-                # Fallback to MAC address match if serial match didn't find the terminal
-                if not terminal and mac_addr:
-                    terminal = db.query(models.Terminal).filter(models.Terminal.mac == mac_addr).first()
+                # Fallback to MAC address match if serial match didn't find any terminals
+                if not terminals and mac_addr:
+                    terminals = db.query(models.Terminal).filter(models.Terminal.mac == mac_addr).all()
                     
-                if terminal:
+                for terminal in terminals:
                     terminal.status = "online"
                     terminal.last_seen = datetime.datetime.utcnow()
                     
-                    if mac_addr:
+                    if mac_addr and not terminal.mac:
                         terminal.mac = mac_addr
                         
                     # Update ip if available
                     ip_addr = event_data.get("ipAddress") or event_data.get("ip")
                     if ip_addr:
                         terminal.ip = ip_addr
+                    print(f"LOG: Terminal {terminal.name} (Local ID: {terminal.local_terminal_id}, Org: {terminal.organization_id}) set to online via JSON")
+                
+                if terminals:
                     db.commit()
-                    print(f"LOG: Terminal {terminal.name} (Local ID: {terminal.local_terminal_id}) set to online via JSON")
                         
-                if emp_id and event_time and terminal:
+                if emp_id and event_time and terminals:
                     event_time = event_time.replace("T", " ")
                     if "+" in event_time:
                         event_time = event_time.split("+")[0]
@@ -328,26 +330,33 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
                         event_time = event_time.replace("Z", "")
                     event_time = event_time.strip()
                     
-                    org_id = terminal.organization_id
-                    log_exists = db.query(models.AttendanceLog).filter(
-                        models.AttendanceLog.organization_id == org_id,
-                        models.AttendanceLog.employee_id == emp_id,
-                        models.AttendanceLog.event_time == event_time,
-                        models.AttendanceLog.event_type == event_type
-                    ).first()
-                    
-                    if not log_exists:
-                        new_log = models.AttendanceLog(
-                            organization_id=org_id,
-                            employee_id=emp_id,
-                            terminal_id=terminal.local_terminal_id,
-                            event_time=event_time,
-                            event_type=event_type,
-                            raw_data=event_str
-                        )
-                        db.add(new_log)
-                        db.commit()
-                        print(f"LOG: Saved attendance log for employee {emp_id} from JSON")
+                    for terminal in terminals:
+                        emp_exists = db.query(models.Employee).filter(
+                            models.Employee.organization_id == terminal.organization_id,
+                            models.Employee.employee_id == emp_id
+                        ).first()
+                        if emp_exists:
+                            org_id = terminal.organization_id
+                            
+                            log_exists = db.query(models.AttendanceLog).filter(
+                                models.AttendanceLog.organization_id == org_id,
+                                models.AttendanceLog.employee_id == emp_id,
+                                models.AttendanceLog.event_time == event_time,
+                                models.AttendanceLog.event_type == event_type
+                            ).first()
+                            
+                            if not log_exists:
+                                new_log = models.AttendanceLog(
+                                    organization_id=org_id,
+                                    employee_id=emp_id,
+                                    terminal_id=terminal.local_terminal_id,
+                                    event_time=event_time,
+                                    event_type=event_type,
+                                    raw_data=event_str
+                                )
+                                db.add(new_log)
+                                db.commit()
+                                print(f"LOG: Saved attendance log for employee {emp_id} from JSON for Org {org_id}")
             
             xml_resp = (
                 '<?xml version="1.0" encoding="utf-8"?>\n'
@@ -389,8 +398,8 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
             device_ip = root.findtext("DeviceIP") or root.findtext("deviceIP")
             
             if device_id:
-                terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
-                if terminal:
+                terminals = db.query(models.Terminal).filter(models.Terminal.serial == device_id).all()
+                for terminal in terminals:
                     terminal.status = "online"
                     if device_ip:
                         terminal.ip = device_ip
@@ -402,6 +411,7 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
                     fw = root.findtext("FirmwareVersion")
                     if fw:
                         terminal.firmware = fw
+                if terminals:
                     db.commit()
             
             xml_resp = (
@@ -436,31 +446,38 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
             if direction is not None and direction.text == "checkOut":
                 event_type = "checkout"
                 
-            terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
-            if terminal:
-                org_id = terminal.organization_id
-                
-                log_exists = db.query(models.AttendanceLog).filter(
-                    models.AttendanceLog.organization_id == org_id,
-                    models.AttendanceLog.employee_id == emp_id,
-                    models.AttendanceLog.event_time == event_time,
-                    models.AttendanceLog.event_type == event_type
-                ).first()
-                
-                if not log_exists:
-                    new_log = models.AttendanceLog(
-                        organization_id=org_id,
-                        employee_id=emp_id,
-                        terminal_id=terminal.local_terminal_id,
-                        event_time=event_time,
-                        event_type=event_type,
-                        raw_data=xml_str
-                    )
-                    db.add(new_log)
-                    
+            terminals = db.query(models.Terminal).filter(models.Terminal.serial == device_id).all()
+            for terminal in terminals:
                 terminal.status = "online"
                 terminal.last_seen = datetime.datetime.utcnow()
                 db.commit()
+                
+                emp_exists = db.query(models.Employee).filter(
+                    models.Employee.organization_id == terminal.organization_id,
+                    models.Employee.employee_id == emp_id
+                ).first()
+                
+                if emp_exists:
+                    org_id = terminal.organization_id
+                    
+                    log_exists = db.query(models.AttendanceLog).filter(
+                        models.AttendanceLog.organization_id == org_id,
+                        models.AttendanceLog.employee_id == emp_id,
+                        models.AttendanceLog.event_time == event_time,
+                        models.AttendanceLog.event_type == event_type
+                    ).first()
+                    
+                    if not log_exists:
+                        new_log = models.AttendanceLog(
+                            organization_id=org_id,
+                            employee_id=emp_id,
+                            terminal_id=terminal.local_terminal_id,
+                            event_time=event_time,
+                            event_type=event_type,
+                            raw_data=xml_str
+                        )
+                        db.add(new_log)
+                        db.commit()
                 
         xml_resp = (
             '<?xml version="1.0" encoding="utf-8"?>\n'
