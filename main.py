@@ -259,6 +259,102 @@ def client_heartbeat(
 @app.post("/isup_event")
 async def isup_event(request: Request, db: Session = Depends(get_db)):
     from fastapi import Response
+    content_type = request.headers.get("content-type", "")
+    
+    # 1. Handle Multipart Form-Data (JSON inside AccessControllerEvent field)
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        try:
+            form_data = await request.form()
+            event_str = form_data.get("AccessControllerEvent")
+            
+            if event_str:
+                import json
+                event_data = json.loads(event_str)
+                print(f"LOG: Parsed AccessControllerEvent JSON: {json.dumps(event_data)[:300]}")
+                
+                device_id = event_data.get("deviceID") or event_data.get("DeviceID") or event_data.get("serialNo") or event_data.get("serialNumber")
+                emp_id = None
+                event_log = event_data.get("eventLog", {})
+                if isinstance(event_log, dict):
+                    emp_id = event_log.get("employeeNoString") or event_log.get("employeeNo")
+                if not emp_id:
+                    emp_id = event_data.get("employeeNoString") or event_data.get("employeeNo")
+                    
+                event_time = None
+                if isinstance(event_log, dict):
+                    event_time = event_log.get("eventTime") or event_log.get("dateTime")
+                if not event_time:
+                    event_time = event_data.get("eventTime") or event_data.get("dateTime")
+                    
+                event_type = "checkin"
+                att_status = None
+                if isinstance(event_log, dict):
+                    att_status = event_log.get("attendanceStatus") or event_log.get("attendanceDirection")
+                if not att_status:
+                    att_status = event_data.get("attendanceStatus") or event_data.get("attendanceDirection")
+                    
+                if att_status in ["checkOut", "checkout", "out"]:
+                    event_type = "checkout"
+                    
+                terminal = None
+                if device_id:
+                    terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
+                    if terminal:
+                        terminal.status = "online"
+                        terminal.last_seen = datetime.datetime.utcnow()
+                        
+                        # Update ip if available
+                        ip_addr = event_data.get("ipAddress") or event_data.get("ip")
+                        if ip_addr:
+                            terminal.ip = ip_addr
+                        db.commit()
+                        print(f"LOG: Terminal {terminal.name} (Local ID: {terminal.local_terminal_id}) set to online via JSON")
+                        
+                if emp_id and event_time and terminal:
+                    event_time = event_time.replace("T", " ")
+                    if "+" in event_time:
+                        event_time = event_time.split("+")[0]
+                    if "Z" in event_time:
+                        event_time = event_time.replace("Z", "")
+                    event_time = event_time.strip()
+                    
+                    org_id = terminal.organization_id
+                    log_exists = db.query(models.AttendanceLog).filter(
+                        models.AttendanceLog.organization_id == org_id,
+                        models.AttendanceLog.employee_id == emp_id,
+                        models.AttendanceLog.event_time == event_time,
+                        models.AttendanceLog.event_type == event_type
+                    ).first()
+                    
+                    if not log_exists:
+                        new_log = models.AttendanceLog(
+                            organization_id=org_id,
+                            employee_id=emp_id,
+                            terminal_id=terminal.local_terminal_id,
+                            event_time=event_time,
+                            event_type=event_type,
+                            raw_data=event_str
+                        )
+                        db.add(new_log)
+                        db.commit()
+                        print(f"LOG: Saved attendance log for employee {emp_id} from JSON")
+            
+            xml_resp = (
+                '<?xml version="1.0" encoding="utf-8"?>\n'
+                '<ResponseStatus>\n'
+                '  <requestURL>isup_event</requestURL>\n'
+                '  <statusCode>1</statusCode>\n'
+                '  <statusString>OK</statusString>\n'
+                '</ResponseStatus>'
+            )
+            return Response(content=xml_resp, media_type="application/xml")
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(status_code=500, content=str(e))
+
+    # 2. Handle Raw XML Requests
     body = await request.body()
     xml_str = body.decode("utf-8", errors="ignore")
     
