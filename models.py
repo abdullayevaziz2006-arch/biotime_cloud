@@ -39,6 +39,7 @@ class Terminal(Base):
     model = Column(String, default="")
     firmware = Column(String, default="")
     serial = Column(String, default="")
+    mac = Column(String, default="")
     last_seen = Column(DateTime, default=datetime.datetime.utcnow)
 
     organization = relationship("Organization", back_populates="terminals")

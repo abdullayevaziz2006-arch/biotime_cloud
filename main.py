@@ -23,8 +23,8 @@ try:
 except Exception:
     pass  # Column already exists or error handled
 
-# Migrate terminals table for serial, model, firmware columns
-for col in ["serial", "model", "firmware"]:
+# Migrate terminals table for serial, model, firmware, mac columns
+for col in ["serial", "model", "firmware", "mac"]:
     try:
         with engine.begin() as conn:
             conn.execute(text(f"ALTER TABLE terminals ADD COLUMN {col} VARCHAR DEFAULT '';"))
@@ -296,19 +296,29 @@ async def isup_event(request: Request, db: Session = Depends(get_db)):
                 if att_status in ["checkOut", "checkout", "out"]:
                     event_type = "checkout"
                     
+                mac_addr = event_data.get("macAddress") or event_data.get("mac")
+                
                 terminal = None
                 if device_id:
                     terminal = db.query(models.Terminal).filter(models.Terminal.serial == device_id).first()
-                    if terminal:
-                        terminal.status = "online"
-                        terminal.last_seen = datetime.datetime.utcnow()
+                
+                # Fallback to MAC address match if serial match didn't find the terminal
+                if not terminal and mac_addr:
+                    terminal = db.query(models.Terminal).filter(models.Terminal.mac == mac_addr).first()
+                    
+                if terminal:
+                    terminal.status = "online"
+                    terminal.last_seen = datetime.datetime.utcnow()
+                    
+                    if mac_addr:
+                        terminal.mac = mac_addr
                         
-                        # Update ip if available
-                        ip_addr = event_data.get("ipAddress") or event_data.get("ip")
-                        if ip_addr:
-                            terminal.ip = ip_addr
-                        db.commit()
-                        print(f"LOG: Terminal {terminal.name} (Local ID: {terminal.local_terminal_id}) set to online via JSON")
+                    # Update ip if available
+                    ip_addr = event_data.get("ipAddress") or event_data.get("ip")
+                    if ip_addr:
+                        terminal.ip = ip_addr
+                    db.commit()
+                    print(f"LOG: Terminal {terminal.name} (Local ID: {terminal.local_terminal_id}) set to online via JSON")
                         
                 if emp_id and event_time and terminal:
                     event_time = event_time.replace("T", " ")
