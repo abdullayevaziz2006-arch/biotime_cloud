@@ -703,6 +703,34 @@ def toggle_organization(
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/admin/organizations/{org_id}/edit")
+def edit_organization(
+    org_id: int,
+    name: str = Form(...),
+    owner_name: str = Form(None),
+    phone: str = Form(None),
+    expires_str: str = Form(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    if user["role"] != "super_admin":
+        raise RedirectException("/login")
+    org = db.query(models.Organization).filter(models.Organization.id == org_id).first()
+    if org:
+        expires_at = None
+        if expires_str:
+            try:
+                expires_at = datetime.datetime.strptime(expires_str, "%Y-%m-%d")
+            except ValueError:
+                pass
+        org.name = name
+        org.owner_name = owner_name
+        org.phone = phone
+        org.license_expires_at = expires_at
+        db.commit()
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @app.get("/admin/organizations/{org_id}", response_class=HTMLResponse)
 def view_organization_detail(
     org_id: int,
