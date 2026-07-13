@@ -93,7 +93,7 @@
     <main class="max-w-7xl mx-auto px-6 mt-8">
         
         <!-- Organization Header Card -->
-        <div class="glass-card p-6 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+        <div id="orgHeader" class="glass-card p-6 rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
             <div class="absolute top-0 right-0 h-48 w-48 bg-gradient-to-bl from-cyan-500/5 to-transparent rounded-full blur-2xl"></div>
             
             <div class="space-y-3">
@@ -131,7 +131,7 @@
             <div class="lg:col-span-2 space-y-8">
                 
                 <!-- Devices List Card -->
-                <div class="glass-card p-6 rounded-2xl">
+                <div id="terminalsContainer" class="glass-card p-6 rounded-2xl">
                     <h2 class="text-lg font-bold text-white mb-6 flex items-center">
                         <i class="fa-solid fa-microchip text-cyan-400 mr-2.5"></i>
                         Qurilmalar va Terminallar
@@ -275,11 +275,12 @@
                     </h2>
                     <div class="h-48 w-full relative flex items-center justify-center">
                         <canvas id="attendanceDoughnutChart"></canvas>
+                        <div id="stats-data" data-present="{{ stats_present }}" data-absent="{{ stats_absent }}" data-late="{{ stats_late }}" class="hidden"></div>
                     </div>
                 </div>
 
                 <!-- Command Queue / History -->
-                <div class="glass-card p-6 rounded-2xl">
+                <div id="commandsContainer" class="glass-card p-6 rounded-2xl">
                     <h2 class="text-lg font-bold text-white mb-4 flex items-center">
                         <i class="fa-solid fa-list-check text-violet-400 mr-2.5"></i>
                         Yuborilgan Buyruqlar
@@ -337,7 +338,7 @@
                 </div>
 
                 <!-- Synced Employees Card -->
-                <div class="glass-card p-6 rounded-2xl">
+                <div id="employeesContainer" class="glass-card p-6 rounded-2xl">
                     <h2 class="text-lg font-bold text-white mb-4 flex items-center">
                         <i class="fa-solid fa-users text-violet-400 mr-2.5"></i>
                         Ishchilar (Jami: {{ employees|length }})
@@ -367,15 +368,19 @@
     </main>
 
     <script>
-        // Doughnut chart logic for employee stats
-        document.addEventListener('DOMContentLoaded', () => {
-            const ctx = document.getElementById('attendanceDoughnutChart').getContext('2d');
+        // Global chart reference
+        let attendanceChart = null;
+
+        function initChart(present, absent, late) {
+            const canvas = document.getElementById('attendanceDoughnutChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             
-            const present = {{ stats_present }};
-            const absent = {{ stats_absent }};
-            const late = {{ stats_late }};
+            if (attendanceChart) {
+                attendanceChart.destroy();
+            }
             
-            new Chart(ctx, {
+            attendanceChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Kelganlar', 'Kelmadi', 'Kechikkan'],
@@ -408,7 +413,136 @@
                     }
                 }
             });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const statsData = document.getElementById('stats-data');
+            if (statsData) {
+                const present = parseInt(statsData.dataset.present) || 0;
+                const absent = parseInt(statsData.dataset.absent) || 0;
+                const late = parseInt(statsData.dataset.late) || 0;
+                initChart(present, absent, late);
+            }
+            
+            // Auto-refresh sections every 10 seconds to show real-time changes
+            setInterval(refreshPageSections, 10000);
         });
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2.5';
+                document.body.appendChild(container);
+            }
+            
+            const toast = document.createElement('div');
+            const borderCol = type === 'success' ? 'border-emerald-500/30' : 'border-red-500/30';
+            const bgCol = type === 'success' ? 'bg-emerald-500/25' : 'bg-red-500/25';
+            const textCol = type === 'success' ? 'text-emerald-400' : 'text-red-400';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+            
+            toast.className = `glass-card flex items-center gap-3 px-4 py-3 rounded-xl border ${borderCol} ${bgCol} ${textCol} text-xs font-semibold shadow-lg transition-all duration-300 transform translate-y-5 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-5', 'opacity-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-5', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // AJAX Form Interceptor
+        document.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (form.getAttribute('action') && (form.getAttribute('action').includes('/downloads/') || form.getAttribute('action').includes('/logout'))) {
+                return; // Normal navigation for downloads/logout
+            }
+            
+            e.preventDefault();
+            
+            const btn = form.querySelector('button[type="submit"]');
+            const originalContent = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Bajarilmoqda...`;
+            }
+            
+            try {
+                const formData = new FormData(form);
+                const action = form.getAttribute('action') || window.location.href;
+                const method = form.getAttribute('method') || 'POST';
+                
+                let body = formData;
+                if (form.getAttribute('enctype') !== 'multipart/form-data') {
+                    body = new URLSearchParams(formData);
+                }
+                
+                const response = await fetch(action, {
+                    method: method,
+                    body: body
+                });
+                
+                if (response.ok) {
+                    showToast("Muvaffaqiyatli bajarildi!");
+                    await refreshPageSections();
+                    
+                    // Clear inputs if adding employee/terminal
+                    if (action.includes('/add_employee') || action.includes('/add_terminal')) {
+                        form.reset();
+                    }
+                } else {
+                    showToast("Xatolik yuz berdi. Iltimos qaytadan urining.", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Aloqa xatosi yuz berdi.", "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
+            }
+        });
+
+        // HTML Swapping for SPA feel
+        async function refreshPageSections() {
+            try {
+                const response = await fetch(window.location.href);
+                if (!response.ok) return;
+                
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const targets = ['orgHeader', 'terminalsContainer', 'commandsContainer', 'employeesContainer'];
+                
+                targets.forEach(id => {
+                    const newEl = doc.getElementById(id);
+                    const oldEl = document.getElementById(id);
+                    if (newEl && oldEl) {
+                        oldEl.innerHTML = newEl.innerHTML;
+                    }
+                });
+                
+                // Update chart
+                const statsData = doc.getElementById('stats-data');
+                if (statsData) {
+                    const present = parseInt(statsData.dataset.present) || 0;
+                    const absent = parseInt(statsData.dataset.absent) || 0;
+                    const late = parseInt(statsData.dataset.late) || 0;
+                    initChart(present, absent, late);
+                }
+            } catch (err) {
+                console.error("Failed to refresh sections:", err);
+            }
+        }
     </script>
 </body>
 </html>

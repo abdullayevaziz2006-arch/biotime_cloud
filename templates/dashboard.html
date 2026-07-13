@@ -122,7 +122,7 @@
         </div>
 
         <!-- System Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div id="statsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <!-- Stat Card 1 -->
             <div onclick="scrollToMijozlar()" class="glass-card p-6 rounded-2xl transition-all duration-300 relative overflow-hidden group cursor-pointer hover:border-blue-500/50">
                 <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
@@ -816,6 +816,96 @@
             }, 3000);
         }
 
+        // AJAX Form Interceptor
+        document.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (form.getAttribute('action') && (form.getAttribute('action').includes('/downloads/') || form.getAttribute('action').includes('/logout'))) {
+                return; // Normal navigation for downloads/logout
+            }
+            
+            e.preventDefault();
+            
+            const btn = form.querySelector('button[type="submit"]');
+            const originalContent = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Bajarilmoqda...`;
+            }
+            
+            try {
+                const formData = new FormData(form);
+                const action = form.getAttribute('action') || window.location.href;
+                const method = form.getAttribute('method') || 'POST';
+                
+                let body = formData;
+                if (form.getAttribute('enctype') !== 'multipart/form-data') {
+                    body = new URLSearchParams(formData);
+                }
+                
+                const response = await fetch(action, {
+                    method: method,
+                    body: body
+                });
+                
+                if (response.ok) {
+                    showToast("Muvaffaqiyatli bajarildi!");
+                    
+                    const isInModal = form.closest('#orgModal') !== null;
+                    if (isInModal && cachedOrgData && cachedOrgData.org) {
+                        // Refresh modal contents dynamically
+                        await openOrgModal(cachedOrgData.org.id);
+                        form.reset();
+                    } else {
+                        // Refresh main dashboard list
+                        await refreshDashboard();
+                        if (action.includes('/organizations/create')) {
+                            form.reset();
+                        }
+                    }
+                    
+                    if (isInModal) {
+                        refreshDashboard();
+                    }
+                } else {
+                    showToast("Xatolik yuz berdi. Iltimos qaytadan urining.");
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Aloqa xatosi yuz berdi.");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalContent;
+                }
+            }
+        });
+
+        // HTML Swapping for dashboard list and stats
+        async function refreshDashboard() {
+            try {
+                const response = await fetch(window.location.href);
+                if (!response.ok) return;
+                
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const oldTable = document.getElementById('orgTableSection');
+                const newTable = doc.getElementById('orgTableSection');
+                if (oldTable && newTable) {
+                    oldTable.innerHTML = newTable.innerHTML;
+                }
+                
+                const oldStats = document.getElementById('statsGrid');
+                const newStats = doc.getElementById('statsGrid');
+                if (oldStats && newStats) {
+                    oldStats.innerHTML = newStats.innerHTML;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
         // Beautiful chart configuration
         document.addEventListener('DOMContentLoaded', () => {
             const ctx = document.getElementById('dashboardChart').getContext('2d');
@@ -892,6 +982,9 @@
                     }
                 }
             });
+
+            // Auto-refresh main dashboard stats and organization list every 15 seconds
+            setInterval(refreshDashboard, 15000);
         });
     </script>
 </body>
