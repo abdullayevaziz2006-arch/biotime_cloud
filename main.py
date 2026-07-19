@@ -588,11 +588,24 @@ async def upload_db_backup(
 def get_dashboard(request: Request, db: Session = Depends(get_db), user: dict = Depends(get_current_user)):
     if user["role"] != "super_admin":
         raise RedirectException(f"/admin/organizations/{user['org'].id}")
+        
+    # Update all terminals in the system to offline if they haven't sent heartbeats in 3 minutes
+    threshold = datetime.datetime.utcnow() - datetime.timedelta(minutes=3)
+    db.query(models.Terminal).filter(
+        models.Terminal.status == "online",
+        models.Terminal.last_seen < threshold
+    ).update({models.Terminal.status: "offline"})
+    db.commit()
+
     organizations = db.query(models.Organization).all()
     # Add count of terminals and employees
     org_list = []
     for org in organizations:
         t_count = db.query(models.Terminal).filter(models.Terminal.organization_id == org.id).count()
+        t_online_count = db.query(models.Terminal).filter(
+            models.Terminal.organization_id == org.id,
+            models.Terminal.status == "online"
+        ).count()
         e_count = db.query(models.Employee).filter(models.Employee.organization_id == org.id, models.Employee.is_active == True).count()
         l_count = db.query(models.AttendanceLog).filter(models.AttendanceLog.organization_id == org.id).count()
         
@@ -613,6 +626,7 @@ def get_dashboard(request: Request, db: Session = Depends(get_db), user: dict = 
             "license_expires_at": org.license_expires_at.strftime("%Y-%m-%d") if org.license_expires_at else "Unlimited",
             "license_status": license_status,
             "terminal_count": t_count,
+            "online_terminal_count": t_online_count,
             "employee_count": e_count,
             "log_count": l_count
         })
